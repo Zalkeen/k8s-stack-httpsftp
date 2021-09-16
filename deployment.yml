@@ -5,9 +5,27 @@ metadata:
   namespace: namespace-name
 data:
   default.conf: |
+    log_format vhost '$http_x_forwarded_for - $remote_addr - $remote_user [$time_local] "$request" '
+                     '$status $body_bytes_sent "$http_referer" '
+                     '"$http_user_agent"';
     server {
-        listen     80;
-        root       /usr/share/nginx/html;
+        listen      80;
+        server_name localhost;
+        root        /usr/share/nginx/html;
+        index       index.html index.htm;
+        error_page  500 502 503 504  /50x.html;
+        access_log  /var/log/nginx/access.log vhost;
+        real_ip_header X-Forwarded-For;
+        location ~* \.php$ {
+            try_files $uri =404;
+            fastcgi_intercept_errors on;
+            fastcgi_pass site-php:9000;
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME /var/www/html/$fastcgi_script_name;
+            fastcgi_param PATH_INFO $fastcgi_path_info;
+            include fastcgi_params;
+        }
     }
 
 ---
